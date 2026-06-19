@@ -70,11 +70,11 @@ export default function App() {
   const handlePrintReceipt = useReactToPrint({ contentRef: receiptRef });
   const handlePrintFullForm = useReactToPrint({ contentRef: fullFormRef });
 
-  // একক পেজে ফিট করার জন্য ডিজাইনটিকে আরও নিখুঁত করা হয়েছে
+  // প্রিন্ট এবং অনলাইন ভিউ হুবহু এক রাখার জন্য ফ্লেক্স ও গ্রিড লেআউট ফিক্সড করা হয়েছে
   const renderFormContent = (isReadOnly = false) => (
-    <div className="bg-[#e2f1f5] p-4 rounded-xl border-2 border-cyan-800 w-full text-slate-800 text-xs print-exact print-page-break" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact', pageBreakInside: 'avoid' }}>
+    <div className="bg-[#e2f1f5] p-5 rounded-xl border-2 border-cyan-800 w-full text-slate-800 text-xs print-exact print-page-break" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact', pageBreakInside: 'avoid' }}>
       
-      {/* Header Panel with New Bold Contacts */}
+      {/* Header Panel */}
       <div className="flex flex-row justify-between items-center border-b-2 border-cyan-800 pb-2 mb-3">
         <div className="bg-cyan-900 text-white p-2 font-bold text-center rounded-lg text-[11px] tracking-wider w-20 h-20 flex items-center justify-center border border-cyan-950 shrink-0">
           AKIB<br/>MATH<br/>CARE
@@ -96,24 +96,24 @@ export default function App() {
       </div>
       
       <div className="space-y-2.5">
-        {/* Top Info Grid */}
-        <div className="grid grid-cols-4 gap-2 bg-cyan-900/10 p-2 rounded-lg border border-cyan-800/20 text-[11px]">
-          <div>
+        {/* Top Info Grid (সবসময় ৪ কলামে থাকবে) */}
+        <div className="flex flex-row gap-2 bg-cyan-900/10 p-2 rounded-lg border border-cyan-800/20 text-[11px]">
+          <div className="flex-1">
             <label className="block font-bold mb-0.5 text-cyan-950">Roll No</label>
             {isReadOnly ? <div className="p-1.5 bg-white rounded border border-slate-300 min-h-[28px] font-bold">{formData.rollNo}</div> : 
             <input name="rollNo" value={formData.rollNo} onChange={handleChange} placeholder="e.g. 101" className="w-full p-1.5 border bg-white rounded focus:outline-none" />}
           </div>
-          <div>
+          <div className="flex-1">
             <label className="block font-bold mb-0.5 text-cyan-950">Batch Name</label>
             {isReadOnly ? <div className="p-1.5 bg-white rounded border border-slate-300 min-h-[28px] font-bold">{formData.batchName}</div> : 
             <input name="batchName" value={formData.batchName} onChange={handleChange} placeholder="e.g. Alpha" className="w-full p-1.5 border bg-white rounded focus:outline-none" />}
           </div>
-          <div>
+          <div className="flex-1">
             <label className="block font-bold mb-0.5 text-cyan-950">Batch Time</label>
             {isReadOnly ? <div className="p-1.5 bg-white rounded border border-slate-300 min-h-[28px] font-bold">{formData.batchTime}</div> : 
             <input name="batchTime" value={formData.batchTime} onChange={handleChange} placeholder="e.g. 09:00 AM" className="w-full p-1.5 border bg-white rounded focus:outline-none" />}
           </div>
-          <div>
+          <div className="flex-1">
             <label className="block font-bold mb-0.5 text-cyan-950">Class Day</label>
             {isReadOnly ? <div className="p-1.5 bg-white rounded border border-slate-300 min-h-[28px] font-bold">{formData.classDays}</div> : 
             <select name="classDays" value={formData.classDays} onChange={handleChange} className="w-full p-1.5 border bg-white rounded focus:outline-none text-xs">
@@ -124,41 +124,43 @@ export default function App() {
         </div>
 
         {/* Main Information Fields */}
-        <div className="space-y-2 bg-white p-3 rounded-lg border border-slate-200 text-[11px]">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
+        <div className="space-y-2.5 bg-white p-3.5 rounded-lg border border-slate-200 text-[11px]">
+          {/* Name Row (পাশাপাশি ২টি কলাম) */}
+          <div className="flex flex-row gap-3">
+            <div className="flex-1">
               <label className="block font-bold text-cyan-950 mb-0.5">Student Name (English Block Letter) *</label>
               {isReadOnly ? <div className="p-1.5 bg-slate-50 border rounded uppercase font-bold min-h-[28px]">{formData.studentNameEn}</div> :
               <input name="studentNameEn" required value={formData.studentNameEn} onChange={handleChange} placeholder="MD. AKIBUL HASAN" className="w-full p-1.5 border rounded uppercase focus:outline-none" />}
             </div>
-            <div>
+            <div className="flex-1">
               <label className="block font-bold text-cyan-950 mb-0.5">ছাত্র/ছাত্রীর নাম (বাংলায়)</label>
               {isReadOnly ? <div className="p-1.5 bg-slate-50 border rounded font-bold min-h-[28px]">{formData.studentNameBn}</div> :
               <input name="studentNameBn" value={formData.studentNameBn} onChange={handleChange} placeholder="মোঃ আকিবুল হাসান" className="w-full p-1.5 border rounded focus:outline-none" />}
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="grid grid-cols-3 gap-2">
-              <div className="col-span-2">
+          {/* Parents Row (পাশাপাশি ২টি বড় সেকশন) */}
+          <div className="flex flex-row gap-3">
+            <div className="flex-[4] flex gap-2">
+              <div className="flex-[2]">
                 <label className="block font-bold text-cyan-950 mb-0.5">Father's Name</label>
                 {isReadOnly ? <div className="p-1.5 bg-slate-50 border rounded min-h-[28px]">{formData.fathersName}</div> :
                 <input name="fathersName" value={formData.fathersName} onChange={handleChange} placeholder="Father's Name" className="w-full p-1.5 border rounded focus:outline-none" />}
               </div>
-              <div>
+              <div className="flex-1">
                 <label className="block font-bold text-cyan-950 mb-0.5">Profession</label>
                 {isReadOnly ? <div className="p-1.5 bg-slate-50 border rounded min-h-[28px]">{formData.fathersProfession}</div> :
                 <input name="fathersProfession" value={formData.fathersProfession} onChange={handleChange} placeholder="Profession" className="w-full p-1.5 border rounded focus:outline-none" />}
               </div>
             </div>
             
-            <div className="grid grid-cols-3 gap-2">
-              <div className="col-span-2">
+            <div className="flex-[4] flex gap-2">
+              <div className="flex-[2]">
                 <label className="block font-bold text-cyan-950 mb-0.5">Mother's Name</label>
                 {isReadOnly ? <div className="p-1.5 bg-slate-50 border rounded min-h-[28px]">{formData.mothersName}</div> :
                 <input name="mothersName" value={formData.mothersName} onChange={handleChange} placeholder="Mother's Name" className="w-full p-1.5 border rounded focus:outline-none" />}
               </div>
-              <div>
+              <div className="flex-1">
                 <label className="block font-bold text-cyan-950 mb-0.5">Profession</label>
                 {isReadOnly ? <div className="p-1.5 bg-slate-50 border rounded min-h-[28px]">{formData.mothersProfession}</div> :
                 <input name="mothersProfession" value={formData.mothersProfession} onChange={handleChange} placeholder="Profession" className="w-full p-1.5 border rounded focus:outline-none" />}
@@ -166,19 +168,21 @@ export default function App() {
             </div>
           </div>
 
+          {/* Address Row */}
           <div>
             <label className="block font-bold text-cyan-950 mb-0.5">Address (ঠিকানা)</label>
             {isReadOnly ? <div className="p-1.5 bg-slate-50 border rounded min-h-[28px]">{formData.address}</div> :
             <input name="address" value={formData.address} onChange={handleChange} placeholder="Vill, Post, Thana, District" className="w-full p-1.5 border rounded focus:outline-none" />}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div className="md:col-span-2">
+          {/* School & Blood Group Row (হুবহু ফিক্সড পাশাপাশি কলাম) */}
+          <div className="flex flex-row gap-3">
+            <div className="flex-[3]">
               <label className="block font-bold text-cyan-950 mb-0.5">Name Of School</label>
               {isReadOnly ? <div className="p-1.5 bg-slate-50 border rounded min-h-[28px]">{formData.schoolName}</div> :
               <input name="schoolName" value={formData.schoolName} onChange={handleChange} placeholder="Enter school name" className="w-full p-1.5 border rounded focus:outline-none" />}
             </div>
-            <div>
+            <div className="flex-1">
               <label className="block font-bold text-cyan-950 mb-0.5">Blood Group</label>
               {isReadOnly ? <div className="p-1.5 bg-slate-50 border rounded min-h-[28px] font-bold text-center">{formData.bloodGroup}</div> :
               <select name="bloodGroup" value={formData.bloodGroup} onChange={handleChange} className="w-full p-1.5 border rounded focus:outline-none text-xs">
@@ -188,19 +192,20 @@ export default function App() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
+          {/* College & Contacts Row (হুবহু ফিক্সড পাশাপাশি কলাম) */}
+          <div className="flex flex-row gap-3">
+            <div className="flex-1">
               <label className="block font-bold text-cyan-950 mb-0.5">Name Of College</label>
               {isReadOnly ? <div className="p-1.5 bg-slate-50 border rounded min-h-[28px]">{formData.collegeName}</div> :
               <input name="collegeName" value={formData.collegeName} onChange={handleChange} placeholder="Enter college name" className="w-full p-1.5 border rounded focus:outline-none" />}
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
+            <div className="flex-1 flex gap-2">
+              <div className="flex-1">
                 <label className="block font-bold text-cyan-950 mb-0.5">Contact No (Guardian)</label>
                 {isReadOnly ? <div className="p-1.5 bg-slate-50 border rounded min-h-[28px]">{formData.guardianPhone}</div> :
                 <input name="guardianPhone" value={formData.guardianPhone} onChange={handleChange} placeholder="01XXXXXXXXX" className="w-full p-1.5 border rounded focus:outline-none" />}
               </div>
-              <div>
+              <div className="flex-1">
                 <label className="block font-bold text-cyan-950 mb-0.5">Contact No (Student) *</label>
                 {isReadOnly ? <div className="p-1.5 bg-slate-50 border rounded min-h-[28px] font-bold">{formData.studentPhone}</div> :
                 <input name="studentPhone" required value={formData.studentPhone} onChange={handleChange} placeholder="01XXXXXXXXX" className="w-full p-1.5 border rounded focus:outline-none" />}
@@ -208,8 +213,9 @@ export default function App() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 pt-1">
-            <div>
+          {/* Batch & Fee Row */}
+          <div className="flex flex-row gap-3 pt-1">
+            <div className="flex-1">
               <label className="block font-bold mb-0.5 text-cyan-950">Batch (কোর্স ব্যাচ)</label>
               {isReadOnly ? <div className="p-1.5 bg-cyan-50/50 border border-cyan-200 rounded font-bold min-h-[28px]">{formData.batchCategory}</div> :
               <select name="batchCategory" value={formData.batchCategory} onChange={handleChange} className="w-full p-1.5 border bg-cyan-50/50 rounded font-semibold focus:outline-none text-xs">
@@ -219,7 +225,7 @@ export default function App() {
                 <option>Admission</option>
               </select>}
             </div>
-            <div>
+            <div className="flex-1">
               <label className="block font-bold mb-0.5 text-cyan-950">Admission/Monthly Fee (BDT) *</label>
               {isReadOnly ? <div className="p-1.5 bg-cyan-50/50 border border-cyan-200 rounded font-black min-h-[28px]">{formData.amount} TK</div> :
               <input type="number" name="amount" value={formData.amount} onChange={handleChange} placeholder="Amount in TK" className="w-full p-1.5 border bg-cyan-50/50 rounded font-bold focus:outline-none" />}
@@ -229,7 +235,7 @@ export default function App() {
 
         {/* Academic Records Table */}
         <div className="bg-white p-3 rounded-lg border border-slate-200 text-[11px]">
-          <h3 className="font-bold text-cyan-950 mb-1 uppercase border-b pb-0.5">Academic Records</h3>
+          <h3 className="font-bold text-cyan-950 mb-1.5 uppercase border-b pb-0.5">Academic Records</h3>
           <table className="w-full text-left border-collapse border border-slate-300">
             <thead>
               <tr className="bg-cyan-950 text-white" style={{ backgroundColor: '#083344 !important', color: '#ffffff !important' }}>
@@ -279,7 +285,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-100 p-4 md:p-6 flex flex-col items-center font-sans text-slate-800">
       
-      {/* গ্লোবাল প্রিন্ট মার্জিন এবং ফিক্সিং স্টাইলব্লক */}
+      {/* গ্লোবাল A4 প্রিন্ট ফিক্সিং সিএসএস স্টাইলব্লক */}
       <style>{`
         @media print {
           .print-exact {
@@ -295,8 +301,13 @@ export default function App() {
           .no-print { display: none; }
           @page {
             size: A4;
-            margin: 0.25in;
+            margin: 0.3in 0.4in;
           }
+          /* প্রিন্ট লেআউটে ফ্লেক্স এবং গ্রিড ফোর্স করার রুলস */
+          .flex { display: flex !important; flex-direction: row !important; }
+          .flex-1 { flex: 1 1 0% !important; }
+          .gap-3 { gap: 12px !important; }
+          .gap-2 { gap: 8px !important; }
         }
       `}</style>
 
@@ -362,7 +373,7 @@ export default function App() {
             </div>
           </div>
 
-          {/* ২. ১ পেজে অপ্টিমাইজড ভর্তি ফরম */}
+          {/* ২. হুবহু অনলাইন গ্রিড ফরম্যাটের ১ পেজের এ৪ ভর্তি ফরম */}
           <div className="w-full bg-white p-2 rounded-xl shadow-md border">
             <h2 className="text-sm font-bold text-cyan-950 px-4 py-2 border-b">ভর্তি ফরম প্রিভিউ (Admission Form Preview)</h2>
             <div className="p-4" ref={fullFormRef}>
@@ -370,7 +381,7 @@ export default function App() {
             </div>
           </div>
           
-          {/* বাটন প্যানেল */}
+          {/* অ্যাকশন কন্ট্রোল প্যানেল */}
           <div className="flex flex-wrap gap-4 justify-center w-full bg-white p-4 rounded-xl shadow border no-print">
             <button onClick={handlePrintReceipt} className="bg-cyan-800 text-white px-5 py-2.5 rounded-lg font-bold shadow hover:bg-cyan-900 transition text-sm">
               🖨️ Print Money Receipt

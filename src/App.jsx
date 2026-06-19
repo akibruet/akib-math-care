@@ -136,14 +136,15 @@ export default function App() {
   const renderFormContent = (isReadOnly = false) => (
     <div className="bg-[#e2f1f5] p-5 rounded-xl border-2 border-cyan-800 w-full text-slate-800 text-xs print-exact print-page-break" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact', pageBreakInside: 'avoid' }}>
       
-      {/* Header Panel with Zoomed Logo */}
+      {/* Header Panel */}
       <div className="flex flex-row justify-between items-center border-b-2 border-cyan-800 pb-2 mb-3">
-        {/* লোগো জুম ইন করতে transform scale-125 ব্যবহার করা হয়েছে */}
-        <div className="w-24 h-24 bg-white rounded-lg border border-cyan-900/30 flex items-center justify-center overflow-hidden shrink-0 shadow-sm p-1">
+        {/* লোগো সার্কেল বড় এবং নিচের লেখাকে শার্প/হাইলাইট করতে ফিল্টার ও স্কেল scale-[2.35] ব্যবহার করা হয়েছে */}
+        <div className="w-24 h-24 bg-white rounded-xl border-2 border-cyan-800/40 flex items-center justify-center overflow-hidden shrink-0 shadow-sm p-1">
           <img 
             src="/logo.png" 
             alt="Akib Math Care" 
-            className="w-full h-full object-contain transform scale-125"
+            className="w-full h-full object-contain transform scale-[2.35] filter contrast-125 brightness-95"
+            style={{ filter: 'drop-shadow(0px 1px 1px rgba(0,0,0,0.15)) contrast(1.2)' }}
             onError={(e) => {
               e.target.style.display = 'none';
               e.target.parentNode.innerHTML = '<div class="text-[11px] font-bold text-center text-cyan-950">AKIB<br/>MATH<br/>CARE</div>';
@@ -414,7 +415,7 @@ export default function App() {
       ) : (
         <div className="flex flex-col items-center w-full max-w-3xl space-y-6">
           
-          {/* রশিদ প্রিভিউ উইথ রিকোয়েস্টেড লোগো অ্যান্ড কন্টাক্ট ইনফো */}
+          {/* রশিদ প্রিভিউ */}
           <div className="w-full bg-white p-2 rounded-xl shadow-md border">
             <div className="flex justify-between items-center px-4 py-2 border-b bg-slate-50">
               <h2 className="text-sm font-bold text-cyan-950">রশিদ প্রিভিউ (Money Receipt Preview)</h2>
@@ -425,10 +426,10 @@ export default function App() {
             <div className="p-4 flex justify-center">
               <div ref={receiptRef} className="bg-white p-8 w-full border-2 border-dashed border-gray-400 text-sm font-sans">
                 
-                {/* মানি রিসিট হেডার উইথ লোগো অ্যান্ড ফিক্সড কন্টাক্টস */}
+                {/* রিসিট হেডার লোগো ফ্রেম (scale-[2.35]) */}
                 <div className="flex flex-row items-center border-b-2 pb-3 mb-4 border-cyan-800 gap-3">
-                  <div className="w-20 h-20 bg-white rounded border flex items-center justify-center overflow-hidden p-1 shrink-0">
-                    <img src="/logo.png" alt="Logo" className="w-full h-full object-contain transform scale-125" />
+                  <div className="w-20 h-20 bg-white rounded-xl border border-cyan-800/30 flex items-center justify-center overflow-hidden shrink-0 p-1">
+                    <img src="/logo.png" alt="Logo" className="w-full h-full object-contain transform scale-[2.35] filter contrast-125" style={{ filter: 'drop-shadow(0px 1px 1px rgba(0,0,0,0.15)) contrast(1.2)' }} />
                   </div>
                   <div className="text-center flex-1">
                     <h3 className="text-2xl font-black text-cyan-900 tracking-wide uppercase">AKIB MATH</h3>

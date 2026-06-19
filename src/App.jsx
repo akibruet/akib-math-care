@@ -82,7 +82,7 @@ export default function App() {
       });
 
       setCurrentSlipNo(maxSlipNo + 1);
-      alert(`\u09B6\u09BF\u0995\u09CD\u09B7\u09BE\u09B0\u09CD\u09A5\u09C0 "${latestDoc.studentNameEn}" \u098F\u09B0 \u09A4\u09A5\u09CD\u09AF \u09B2\u09CB\u09A1 \u09B9\u09DF\u09C7\u099B\u09C7!\n\u09AC\u09B0\u09CD\u09A4\u09AE\u09BE\u09A8 \u09AC\u0995\u09C7\u09DF\u09BE \u0986\u099B\u09C7: ${currentDueFromDb} TK`);
+      alert(`শিক্ষার্থী "${latestDoc.studentNameEn}" এর তথ্য লোড হয়েছে!\nবর্তমান বকেয়া আছে: ${currentDueFromDb} TK`);
     } catch (error) {
       console.error("Error searching student: ", error);
       alert("অনুসন্ধান করতে সমস্যা হয়েছে!");
@@ -136,16 +136,15 @@ export default function App() {
   const renderFormContent = (isReadOnly = false) => (
     <div className="bg-[#e2f1f5] p-5 rounded-xl border-2 border-cyan-800 w-full text-slate-800 text-xs print-exact print-page-break" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact', pageBreakInside: 'avoid' }}>
       
-      {/* Header Panel with Request: Real Logo Component */}
+      {/* Header Panel with Zoomed Logo */}
       <div className="flex flex-row justify-between items-center border-b-2 border-cyan-800 pb-2 mb-3">
-        {/* বাম পাশের বক্সে এখন সরাসরি তোমার ইমেজ লোগো বসে যাবে */}
+        {/* লোগো জুম ইন করতে transform scale-125 ব্যবহার করা হয়েছে */}
         <div className="w-24 h-24 bg-white rounded-lg border border-cyan-900/30 flex items-center justify-center overflow-hidden shrink-0 shadow-sm p-1">
           <img 
             src="/logo.png" 
             alt="Akib Math Care" 
-            className="w-full h-full object-contain"
+            className="w-full h-full object-contain transform scale-125"
             onError={(e) => {
-              // লোগো ইমেজ কোনো কারণে না পেলে ব্যাকআপ হিসেবে টেক্সট দেখাবে
               e.target.style.display = 'none';
               e.target.parentNode.innerHTML = '<div class="text-[11px] font-bold text-center text-cyan-950">AKIB<br/>MATH<br/>CARE</div>';
             }}
@@ -270,6 +269,7 @@ export default function App() {
             </div>
           </div>
 
+          {/* Fee & Batch Row */}
           <div className="flex flex-row gap-3 pt-1">
             <div className="flex-1">
               <label className="block font-bold mb-0.5 text-cyan-950">Batch / Year *</label>
@@ -299,7 +299,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* Academic Records Panel with Request: "Test" text completely removed */}
+        {/* Academic Records */}
         <div className="bg-white p-3 rounded-lg border border-slate-200 text-[11px]">
           <h3 className="font-bold text-cyan-950 mb-1.5 uppercase border-b pb-0.5">Academic Records</h3>
           <table className="w-full text-left border-collapse border border-slate-300">
@@ -325,7 +325,6 @@ export default function App() {
                 </td>
               </tr>
               <tr>
-                {/* হুবহু রিকোয়েস্ট অনুযায়ী "Test" লেখাটি কেটে শুধু HSC রাখা হয়েছে */}
                 <td className="p-2 border border-slate-300 font-bold bg-slate-50">HSC</td>
                 <td className="p-1 border border-slate-300">
                   {isReadOnly ? formData.hscBoard : <select name="hscBoard" value={formData.hscBoard} onChange={handleChange} className="w-full focus:outline-none"><option>Rajshahi</option><option>Dhaka</option><option>Dinajpur</option><option>Jashore</option></select>}
@@ -415,7 +414,7 @@ export default function App() {
       ) : (
         <div className="flex flex-col items-center w-full max-w-3xl space-y-6">
           
-          {/* রশিদ প্রিভিউ */}
+          {/* রশিদ প্রিভিউ উইথ রিকোয়েস্টেড লোগো অ্যান্ড কন্টাক্ট ইনফো */}
           <div className="w-full bg-white p-2 rounded-xl shadow-md border">
             <div className="flex justify-between items-center px-4 py-2 border-b bg-slate-50">
               <h2 className="text-sm font-bold text-cyan-950">রশিদ প্রিভিউ (Money Receipt Preview)</h2>
@@ -425,11 +424,24 @@ export default function App() {
             </div>
             <div className="p-4 flex justify-center">
               <div ref={receiptRef} className="bg-white p-8 w-full border-2 border-dashed border-gray-400 text-sm font-sans">
-                <div className="text-center border-b-2 pb-3 mb-4 border-cyan-800">
-                  <h3 className="text-2xl font-black text-cyan-900 tracking-wide uppercase">AKIB MATH</h3>
-                  <p className="text-xs font-bold text-cyan-700 uppercase tracking-wider">ACADEMIC & ADMISSION CARE</p>
-                  <p className="text-[11px] text-gray-500 font-medium mt-1">Malopara, Mohila College Road, Kadirganj, Rajshahi</p>
-                  <div className="mt-2.5 inline-block bg-slate-900 text-white font-black px-5 py-0.5 rounded tracking-widest text-xs">
+                
+                {/* মানি রিসিট হেডার উইথ লোগো অ্যান্ড ফিক্সড কন্টাক্টস */}
+                <div className="flex flex-row items-center border-b-2 pb-3 mb-4 border-cyan-800 gap-3">
+                  <div className="w-20 h-20 bg-white rounded border flex items-center justify-center overflow-hidden p-1 shrink-0">
+                    <img src="/logo.png" alt="Logo" className="w-full h-full object-contain transform scale-125" />
+                  </div>
+                  <div className="text-center flex-1">
+                    <h3 className="text-2xl font-black text-cyan-900 tracking-wide uppercase">AKIB MATH</h3>
+                    <p className="text-xs font-bold text-cyan-700 uppercase tracking-wider">ACADEMIC & ADMISSION CARE</p>
+                    <p className="text-[10px] text-gray-500 font-medium">Malopara, Mohila College Road, Kadirganj, Rajshahi</p>
+                    <p className="text-[10px] text-slate-700 font-mono mt-0.5">
+                      Contact: <strong className="text-cyan-950 text-xs">01602501062</strong>, <strong className="text-cyan-950 text-xs">01784292677</strong>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-2 text-center mb-4">
+                  <div className="inline-block bg-slate-900 text-white font-black px-5 py-0.5 rounded tracking-widest text-xs">
                     MONEY RECEIPT / SLIP #{currentSlipNo}
                   </div>
                 </div>
@@ -455,7 +467,7 @@ export default function App() {
                 
                 <div className="bg-slate-50 p-3 rounded border border-slate-200 space-y-1.5 text-xs font-medium">
                   <div className="flex justify-between text-slate-600">
-                    <span>Total Course Fee (মোট курс ফি):</span>
+                    <span>Total Course Fee (মোট কোর্স ফি):</span>
                     <span>{Number(formData.totalCourseFee).toLocaleString()} TK</span>
                   </div>
                   <div className="flex justify-between text-slate-600">

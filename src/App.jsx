@@ -82,7 +82,7 @@ export default function App() {
       });
 
       setCurrentSlipNo(maxSlipNo + 1);
-      alert(`শিক্ষার্থী "${latestDoc.studentNameEn}" এর তথ্য লোড হয়েছে!\nবর্তমান বকেয়া আছে: ${currentDueFromDb} TK`);
+      alert(`\u09B6\u09BF\u0995\u09CD\u09B7\u09BE\u09B0\u09CD\u09A5\u09C0 "${latestDoc.studentNameEn}" \u098F\u09B0 \u09A4\u09A5\u09CD\u09AF \u09B2\u09CB\u09A1 \u09B9\u09DF\u09C7\u099B\u09C7!\n\u09AC\u09B0\u09CD\u09A4\u09AE\u09BE\u09A8 \u09AC\u0995\u09C7\u09DF\u09BE \u0986\u099B\u09C7: ${currentDueFromDb} TK`);
     } catch (error) {
       console.error("Error searching student: ", error);
       alert("অনুসন্ধান করতে সমস্যা হয়েছে!");
@@ -136,14 +136,24 @@ export default function App() {
   const renderFormContent = (isReadOnly = false) => (
     <div className="bg-[#e2f1f5] p-5 rounded-xl border-2 border-cyan-800 w-full text-slate-800 text-xs print-exact print-page-break" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact', pageBreakInside: 'avoid' }}>
       
-      {/* Header Panel */}
+      {/* Header Panel with Request: Real Logo Component */}
       <div className="flex flex-row justify-between items-center border-b-2 border-cyan-800 pb-2 mb-3">
-        <div className="bg-cyan-900 text-white p-3 font-bold text-center rounded-lg text-xs tracking-wider w-24 h-24 flex items-center justify-center border border-cyan-950 shrink-0">
-          AKIB<br/>MATH<br/>CARE
+        {/* বাম পাশের বক্সে এখন সরাসরি তোমার ইমেজ লোগো বসে যাবে */}
+        <div className="w-24 h-24 bg-white rounded-lg border border-cyan-900/30 flex items-center justify-center overflow-hidden shrink-0 shadow-sm p-1">
+          <img 
+            src="/logo.png" 
+            alt="Akib Math Care" 
+            className="w-full h-full object-contain"
+            onError={(e) => {
+              // লোগো ইমেজ কোনো কারণে না পেলে ব্যাকআপ হিসেবে টেক্সট দেখাবে
+              e.target.style.display = 'none';
+              e.target.parentNode.innerHTML = '<div class="text-[11px] font-bold text-center text-cyan-950">AKIB<br/>MATH<br/>CARE</div>';
+            }}
+          />
         </div>
         <div className="text-center flex-1 px-4">
           <h1 className="text-4xl font-black text-cyan-950 tracking-wider uppercase leading-none">AKIB MATH</h1>
-          <p className="text-xs font-bold text-cyan-800 tracking-wide uppercase mt-1">ACADEMIC AND ADMISSION CARE</p>
+          <p className="text-sm font-bold text-cyan-800 tracking-wide uppercase mt-1">ACADEMIC AND ADMISSION CARE</p>
           <p className="text-[10px] bg-cyan-950 text-white inline-block px-4 py-0.5 rounded-full font-semibold mt-1.5">
             Director: Md. Akibul Hasan (Akib) <span className="text-[8px] opacity-80">(CSE, RUET)</span>
           </p>
@@ -260,7 +270,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* নতুন স্পেসিফিক ব্যাচ অপশন সহ রো */}
           <div className="flex flex-row gap-3 pt-1">
             <div className="flex-1">
               <label className="block font-bold mb-0.5 text-cyan-950">Batch / Year *</label>
@@ -290,7 +299,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* Academic Records */}
+        {/* Academic Records Panel with Request: "Test" text completely removed */}
         <div className="bg-white p-3 rounded-lg border border-slate-200 text-[11px]">
           <h3 className="font-bold text-cyan-950 mb-1.5 uppercase border-b pb-0.5">Academic Records</h3>
           <table className="w-full text-left border-collapse border border-slate-300">
@@ -316,7 +325,8 @@ export default function App() {
                 </td>
               </tr>
               <tr>
-                <td className="p-2 border border-slate-300 font-bold bg-slate-50">HSC / Test</td>
+                {/* হুবহু রিকোয়েস্ট অনুযায়ী "Test" লেখাটি কেটে শুধু HSC রাখা হয়েছে */}
+                <td className="p-2 border border-slate-300 font-bold bg-slate-50">HSC</td>
                 <td className="p-1 border border-slate-300">
                   {isReadOnly ? formData.hscBoard : <select name="hscBoard" value={formData.hscBoard} onChange={handleChange} className="w-full focus:outline-none"><option>Rajshahi</option><option>Dhaka</option><option>Dinajpur</option><option>Jashore</option></select>}
                 </td>
@@ -445,7 +455,7 @@ export default function App() {
                 
                 <div className="bg-slate-50 p-3 rounded border border-slate-200 space-y-1.5 text-xs font-medium">
                   <div className="flex justify-between text-slate-600">
-                    <span>Total Course Fee (মোট কোর্স ফি):</span>
+                    <span>Total Course Fee (মোট курс ফি):</span>
                     <span>{Number(formData.totalCourseFee).toLocaleString()} TK</span>
                   </div>
                   <div className="flex justify-between text-slate-600">

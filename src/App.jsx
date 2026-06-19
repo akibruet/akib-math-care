@@ -25,7 +25,7 @@ export default function App() {
     bloodGroup: 'A+',
     guardianPhone: '',
     studentPhone: '',
-    batchCategory: 'HSC 1st Year',
+    batchCategory: 'HSC 1st Year', // ডিফল্ট সিলেকশন
     
     sscBoard: 'Rajshahi', sscYear: '', sscGpa: '',
     hscBoard: 'Rajshahi', hscYear: '', hscGpa: '',
@@ -43,7 +43,6 @@ export default function App() {
   const receiptRef = useRef();
   const fullFormRef = useRef();
 
-  // ডাটাবেজ থেকে স্টুডেন্ট খুঁজে বের করার অপ্টিমাইজড ফাংশন
   const handleFindStudent = async () => {
     if (!searchRoll) {
       alert("অনুগ্রহ করে খোঁজার জন্য রোল নাম্বারটি লিখুন!");
@@ -60,7 +59,6 @@ export default function App() {
         return;
       }
 
-      // সবগুলো ট্রানজেকশন অ্যানালাইসিস করে লেটেস্ট বকেয়া বের করা
       let latestDoc = null;
       let maxSlipNo = 0;
 
@@ -73,7 +71,6 @@ export default function App() {
         }
       });
 
-      // বকেয়া ও জমার হিসাব টাইপ কাস্টিং ফিক্স
       const currentDueFromDb = Number(latestDoc.dueAmount || 0);
       const totalFeeFromDb = Number(latestDoc.totalCourseFee || 14000);
       const calculatedPrevPaid = totalFeeFromDb - currentDueFromDb;
@@ -110,12 +107,9 @@ export default function App() {
       const generatedReceiptNo = 'AMAAC-' + Math.floor(100000 + Math.random() * 900000);
       setReceiptNo(generatedReceiptNo);
 
-      // খুচরা সংখ্যা (যেমন: ২৪০০, ১২০০) নিখুঁত হিসাব করার জন্য Number() মেকানিজম
       const totalFee = Number(formData.totalCourseFee || 0);
       const prevPaid = Number(formData.previousPaid || 0);
       const paidNow = Number(formData.admissionFeePaid || 0);
-
-      // ফাইনাল নিখুঁত বকেয়া হিসাব
       const finalDueCalculated = totalFee - prevPaid - paidNow;
 
       const paymentData = {
@@ -128,7 +122,6 @@ export default function App() {
       };
 
       await addDoc(collection(db, "students"), paymentData);
-
       setIsSubmitting(false);
       setShowReceipt(true);
     } catch (error) {
@@ -143,6 +136,7 @@ export default function App() {
 
   const renderFormContent = (isReadOnly = false) => (
     <div className="bg-[#e2f1f5] p-5 rounded-xl border-2 border-cyan-800 w-full text-slate-800 text-xs print-exact print-page-break" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact', pageBreakInside: 'avoid' }}>
+      
       {/* Header Panel */}
       <div className="flex flex-row justify-between items-center border-b-2 border-cyan-800 pb-2 mb-3">
         <div className="bg-cyan-900 text-white p-3 font-bold text-center rounded-lg text-xs tracking-wider w-24 h-24 flex items-center justify-center border border-cyan-950 shrink-0">
@@ -277,24 +271,30 @@ export default function App() {
             </div>
           </div>
 
-          {/* Fee Panel */}
+          {/* রিকোয়েস্ট অনুযায়ী কাস্টমাইজড কোর্স ব্যাচ / বছর সিলেকশন অপশন */}
           <div className="flex flex-row gap-3 pt-1">
             <div className="flex-1">
-              <label className="block font-bold mb-0.5 text-cyan-950">Purpose (ধরণ)</label>
-              <div className="p-2 bg-cyan-50/50 border border-cyan-200 rounded font-bold min-h-[34px]">{formData.paymentType}</div>
+              <label className="block font-bold mb-0.5 text-cyan-950">Batch / Year (কোর্স ব্যাচ / বছর) *</label>
+              {isReadOnly ? <div className="p-2 bg-cyan-900 text-white border rounded font-black min-h-[34px]">{formData.batchCategory}</div> :
+              <select name="batchCategory" value={formData.batchCategory} onChange={handleChange} className="w-full p-2 border border-cyan-400 bg-amber-50 rounded font-bold focus:outline-none text-xs">
+                <option value="HSC 1st Year">HSC 1st Year (১ম বর্ষ)</option>
+                <option value="HSC 2nd Year">HSC 2nd Year (২য় বর্ষ)</option>
+                <option value="HSC Final Preparation">HSC Final Preparation (ফাইনাল প্রস্তুতি)</option>
+                <option value="Admission">Admission (বিশ্ববিদ্যালয় ভর্তি)</option>
+              </select>}
             </div>
             <div className="flex-1">
               <label className="block font-bold mb-0.5 text-cyan-950">Total Course Fee</label>
               <div className="p-2 bg-slate-50 border rounded font-bold min-h-[34px]">{formData.totalCourseFee} TK</div>
             </div>
             <div className="flex-1">
-              <label className="block font-bold mb-0.5 text-cyan-950">Previously Paid (আগে জমা)</label>
+              <label className="block font-bold mb-0.5 text-cyan-950">Previously Paid</label>
               <div className="p-2 bg-slate-50 border rounded font-semibold text-emerald-700 min-h-[34px]">{formData.previousPaid} TK</div>
             </div>
             <div className="flex-1">
               <label className="block font-bold mb-0.5 text-cyan-950">Amount Paid Now *</label>
-              {isReadOnly ? <div className="p-2 bg-cyan-900 text-white rounded font-black min-h-[34px]">{formData.admissionFeePaid} TK</div> :
-              <input type="number" name="admissionFeePaid" value={formData.admissionFeePaid} onChange={handleChange} placeholder="আজকে জমার পরিমাণ" className="w-full p-2 border border-cyan-400 bg-amber-50 rounded font-black focus:outline-none" />}
+              {isReadOnly ? <div className="p-2 bg-slate-100 border rounded font-black min-h-[34px]">{formData.admissionFeePaid} TK</div> :
+              <input type="number" name="admissionFeePaid" value={formData.admissionFeePaid} onChange={handleChange} placeholder="আজকে জমার পরিমাণ" className="w-full p-2 border bg-white rounded font-black focus:outline-none" />}
             </div>
           </div>
         </div>
@@ -318,10 +318,10 @@ export default function App() {
                   {isReadOnly ? formData.sscBoard : <select name="sscBoard" value={formData.sscBoard} onChange={handleChange} className="w-full focus:outline-none"><option>Rajshahi</option><option>Dhaka</option><option>Dinajpur</option><option>Jashore</option></select>}
                 </td>
                 <td className="p-1 border border-slate-300">
-                  {isReadOnly ? formData.sscYear : <input name="sscYear" value={formData.sscYear} onChange={handleChange} placeholder="e.g. 2024" className="w-full p-1 focus:outline-none" />}
+                  {isReadOnly ? formData.sscYear : <input name="sscYear" value={formData.sscYear} onChange={handleChange} placeholder="e.g. 2024" className="w-full focus:outline-none" />}
                 </td>
                 <td className="p-1 border border-slate-300">
-                  {isReadOnly ? formData.sscGpa : <input name="sscGpa" value={formData.sscGpa} onChange={handleChange} placeholder="e.g. 5.00" className="w-full p-1 focus:outline-none font-bold" />}
+                  {isReadOnly ? formData.sscGpa : <input name="sscGpa" value={formData.sscGpa} onChange={handleChange} placeholder="e.g. 5.00" className="w-full focus:outline-none font-bold" />}
                 </td>
               </tr>
               <tr>
@@ -330,7 +330,7 @@ export default function App() {
                   {isReadOnly ? formData.hscBoard : <select name="hscBoard" value={formData.hscBoard} onChange={handleChange} className="w-full focus:outline-none"><option>Rajshahi</option><option>Dhaka</option><option>Dinajpur</option><option>Jashore</option></select>}
                 </td>
                 <td className="p-1 border border-slate-300">
-                  {isReadOnly ? formData.hscYear : <input name="hscYear" value={formData.hscYear} onChange={handleChange} placeholder="e.g. 2026" className="w-full p-1 focus:outline-none" />}
+                  {isReadOnly ? formData.hscYear : <input name="hscYear" value={formData.hscYear} onChange={handleChange} placeholder="e.g. 2026" className="w-full focus:outline-none" />}
                 </td>
                 <td className="p-1 border border-slate-300">
                   {isReadOnly ? formData.hscGpa : <input name="hscGpa" value={formData.hscGpa} onChange={handleChange} placeholder="e.g. 5.00" className="w-full p-1 focus:outline-none font-bold" />}
@@ -414,12 +414,12 @@ export default function App() {
       ) : (
         <div className="flex flex-col items-center w-full max-w-3xl space-y-6">
           
-          {/* রশিদ প্রিভিউ উইথ স্লিপ নাম্বার ট্র্যাকিং */}
+          {/* রশিদ প্রিভিউ */}
           <div className="w-full bg-white p-2 rounded-xl shadow-md border">
             <div className="flex justify-between items-center px-4 py-2 border-b bg-slate-50">
               <h2 className="text-sm font-bold text-cyan-950">রশিদ প্রিভিউ (Money Receipt Preview)</h2>
               <span className="bg-cyan-900 text-white font-black px-3 py-1 rounded text-xs">
-                SLIP NO: #{currentSlipNo} {currentSlipNo === 1 ? '(Admission)' : '(Due Payment)'}
+                SLIP NO: #{currentSlipNo}
               </span>
             </div>
             <div className="p-4 flex justify-center">
@@ -447,12 +447,12 @@ export default function App() {
                 <div className="space-y-2 text-xs mb-4">
                   <p><strong className="inline-block w-36">Student Name:</strong> <span className="uppercase font-bold text-cyan-950">{formData.studentNameEn}</span></p>
                   <p><strong className="inline-block w-36">Contact No:</strong> {formData.studentPhone}</p>
-                  <p><strong className="inline-block w-36">Course Category:</strong> <span className="font-semibold">{formData.batchCategory}</span></p>
+                  {/* কন্ডিশন: রিসিটে ব্যাচ / বছর একদম আলাদা এবং স্পষ্ট করে দেখানো হয়েছে */}
+                  <p><strong className="inline-block w-36">Batch / Year:</strong> <span className="font-bold text-cyan-900 underline uppercase">{formData.batchCategory}</span></p>
                 </div>
                 
                 <hr className="border-gray-300 my-2" />
                 
-                {/* নিখুঁত ও নির্ভুল গাণিতিক বিবরণী */}
                 <div className="bg-slate-50 p-3 rounded border border-slate-200 space-y-1.5 text-xs font-medium">
                   <div className="flex justify-between text-slate-600">
                     <span>Total Course Fee (মোট কোর্স ফি):</span>

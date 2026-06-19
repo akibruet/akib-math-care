@@ -22,10 +22,9 @@ export default function App() {
     address: '',
     schoolName: '',
     collegeName: '',
-    bloodGroup: 'A+',
     guardianPhone: '',
     studentPhone: '',
-    batchCategory: 'HSC 1st Year', // ডিফল্ট সিলেকশন
+    batchCategory: 'HSC 1st Year', 
     
     sscBoard: 'Rajshahi', sscYear: '', sscGpa: '',
     hscBoard: 'Rajshahi', hscYear: '', hscGpa: '',
@@ -144,7 +143,7 @@ export default function App() {
         </div>
         <div className="text-center flex-1 px-4">
           <h1 className="text-4xl font-black text-cyan-950 tracking-wider uppercase leading-none">AKIB MATH</h1>
-          <p className="text-sm font-bold text-cyan-800 tracking-wide uppercase mt-1">ACADEMIC AND ADMISSION CARE</p>
+          <p className="text-xs font-bold text-cyan-800 tracking-wide uppercase mt-1">ACADEMIC AND ADMISSION CARE</p>
           <p className="text-[10px] bg-cyan-950 text-white inline-block px-4 py-0.5 rounded-full font-semibold mt-1.5">
             Director: Md. Akibul Hasan (Akib) <span className="text-[8px] opacity-80">(CSE, RUET)</span>
           </p>
@@ -235,20 +234,10 @@ export default function App() {
             <input name="address" value={formData.address} onChange={handleChange} placeholder="Vill, Post, Thana, District" className="w-full p-2 border rounded focus:outline-none" />}
           </div>
 
-          <div className="flex flex-row gap-3">
-            <div className="flex-[3]">
-              <label className="block font-bold text-cyan-950 mb-0.5">Name Of School</label>
-              {isReadOnly ? <div className="p-2 bg-slate-50 border rounded min-h-[34px]">{formData.schoolName}</div> :
-              <input name="schoolName" value={formData.schoolName} onChange={handleChange} placeholder="Enter school name" className="w-full p-2 border rounded focus:outline-none" />}
-            </div>
-            <div className="flex-1">
-              <label className="block font-bold text-cyan-950 mb-0.5">Blood Group</label>
-              {isReadOnly ? <div className="p-2 bg-slate-50 border rounded min-h-[34px] font-bold text-center">{formData.bloodGroup}</div> :
-              <select name="bloodGroup" value={formData.bloodGroup} onChange={handleChange} className="w-full p-2 border rounded focus:outline-none text-xs">
-                <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
-                <option>O+</option><option>O-</option><option>AB+</option><option>AB-</option>
-              </select>}
-            </div>
+          <div>
+            <label className="block font-bold text-cyan-950 mb-0.5">Name Of School</label>
+            {isReadOnly ? <div className="p-2 bg-slate-50 border rounded min-h-[34px]">{formData.schoolName}</div> :
+            <input name="schoolName" value={formData.schoolName} onChange={handleChange} placeholder="Enter school name" className="w-full p-2 border rounded focus:outline-none" />}
           </div>
 
           <div className="flex flex-row gap-3">
@@ -271,16 +260,18 @@ export default function App() {
             </div>
           </div>
 
-          {/* রিকোয়েস্ট অনুযায়ী কাস্টমাইজড কোর্স ব্যাচ / বছর সিলেকশন অপশন */}
+          {/* নতুন স্পেসিফিক ব্যাচ অপশন সহ রো */}
           <div className="flex flex-row gap-3 pt-1">
             <div className="flex-1">
-              <label className="block font-bold mb-0.5 text-cyan-950">Batch / Year (কোর্স ব্যাচ / বছর) *</label>
-              {isReadOnly ? <div className="p-2 bg-cyan-900 text-white border rounded font-black min-h-[34px]">{formData.batchCategory}</div> :
-              <select name="batchCategory" value={formData.batchCategory} onChange={handleChange} className="w-full p-2 border border-cyan-400 bg-amber-50 rounded font-bold focus:outline-none text-xs">
-                <option value="HSC 1st Year">HSC 1st Year (১ম বর্ষ)</option>
-                <option value="HSC 2nd Year">HSC 2nd Year (২য় বর্ষ)</option>
-                <option value="HSC Final Preparation">HSC Final Preparation (ফাইনাল প্রস্তুতি)</option>
-                <option value="Admission">Admission (বিশ্ববিদ্যালয় ভর্তি)</option>
+              <label className="block font-bold mb-0.5 text-cyan-950">Batch / Year *</label>
+              {isReadOnly ? <div className="p-2 bg-white border border-slate-300 rounded font-bold min-h-[34px]">{formData.batchCategory}</div> :
+              <select name="batchCategory" value={formData.batchCategory} onChange={handleChange} className="w-full p-2 border bg-white rounded font-semibold focus:outline-none text-xs">
+                <option value="HSC 1st Year">HSC 1st Year</option>
+                <option value="HSC 2nd Year">HSC 2nd Year</option>
+                <option value="HSC Preparation">HSC Preparation</option>
+                <option value="Admission (Varsity)">Admission (Varsity)</option>
+                <option value="Admission (Medical)">Admission (Medical)</option>
+                <option value="Admission (Engineering)">Admission (Engineering)</option>
               </select>}
             </div>
             <div className="flex-1">
@@ -293,7 +284,7 @@ export default function App() {
             </div>
             <div className="flex-1">
               <label className="block font-bold mb-0.5 text-cyan-950">Amount Paid Now *</label>
-              {isReadOnly ? <div className="p-2 bg-slate-100 border rounded font-black min-h-[34px]">{formData.admissionFeePaid} TK</div> :
+              {isReadOnly ? <div className="p-2 bg-cyan-900 text-white rounded font-black min-h-[34px]">{formData.admissionFeePaid} TK</div> :
               <input type="number" name="admissionFeePaid" value={formData.admissionFeePaid} onChange={handleChange} placeholder="আজকে জমার পরিমাণ" className="w-full p-2 border bg-white rounded font-black focus:outline-none" />}
             </div>
           </div>
@@ -318,10 +309,10 @@ export default function App() {
                   {isReadOnly ? formData.sscBoard : <select name="sscBoard" value={formData.sscBoard} onChange={handleChange} className="w-full focus:outline-none"><option>Rajshahi</option><option>Dhaka</option><option>Dinajpur</option><option>Jashore</option></select>}
                 </td>
                 <td className="p-1 border border-slate-300">
-                  {isReadOnly ? formData.sscYear : <input name="sscYear" value={formData.sscYear} onChange={handleChange} placeholder="e.g. 2024" className="w-full focus:outline-none" />}
+                  {isReadOnly ? formData.sscYear : <input name="sscYear" value={formData.sscYear} onChange={handleChange} placeholder="e.g. 2024" className="w-full p-1 focus:outline-none" />}
                 </td>
                 <td className="p-1 border border-slate-300">
-                  {isReadOnly ? formData.sscGpa : <input name="sscGpa" value={formData.sscGpa} onChange={handleChange} placeholder="e.g. 5.00" className="w-full focus:outline-none font-bold" />}
+                  {isReadOnly ? formData.sscGpa : <input name="sscGpa" value={formData.sscGpa} onChange={handleChange} placeholder="e.g. 5.00" className="w-full p-1 focus:outline-none font-bold" />}
                 </td>
               </tr>
               <tr>
@@ -330,7 +321,7 @@ export default function App() {
                   {isReadOnly ? formData.hscBoard : <select name="hscBoard" value={formData.hscBoard} onChange={handleChange} className="w-full focus:outline-none"><option>Rajshahi</option><option>Dhaka</option><option>Dinajpur</option><option>Jashore</option></select>}
                 </td>
                 <td className="p-1 border border-slate-300">
-                  {isReadOnly ? formData.hscYear : <input name="hscYear" value={formData.hscYear} onChange={handleChange} placeholder="e.g. 2026" className="w-full focus:outline-none" />}
+                  {isReadOnly ? formData.hscYear : <input name="hscYear" value={formData.hscYear} onChange={handleChange} placeholder="e.g. 2026" className="w-full p-1 focus:outline-none" />}
                 </td>
                 <td className="p-1 border border-slate-300">
                   {isReadOnly ? formData.hscGpa : <input name="hscGpa" value={formData.hscGpa} onChange={handleChange} placeholder="e.g. 5.00" className="w-full p-1 focus:outline-none font-bold" />}
@@ -447,8 +438,7 @@ export default function App() {
                 <div className="space-y-2 text-xs mb-4">
                   <p><strong className="inline-block w-36">Student Name:</strong> <span className="uppercase font-bold text-cyan-950">{formData.studentNameEn}</span></p>
                   <p><strong className="inline-block w-36">Contact No:</strong> {formData.studentPhone}</p>
-                  {/* কন্ডিশন: রিসিটে ব্যাচ / বছর একদম আলাদা এবং স্পষ্ট করে দেখানো হয়েছে */}
-                  <p><strong className="inline-block w-36">Batch / Year:</strong> <span className="font-bold text-cyan-900 underline uppercase">{formData.batchCategory}</span></p>
+                  <p><strong className="inline-block w-36">Batch / Year:</strong> <span className="font-bold text-cyan-900 tracking-wide uppercase">{formData.batchCategory}</span></p>
                 </div>
                 
                 <hr className="border-gray-300 my-2" />
@@ -506,10 +496,9 @@ export default function App() {
                 rollNo: '', batchName: '', batchTime: '', classDays: 'Sat-Mon-Wed',
                 studentNameEn: '', studentNameBn: '', fathersName: '', fathersProfession: '',
                 mothersName: '', mothersProfession: '', address: '', schoolName: '',
-                collegeName: '', bloodGroup: 'A+', guardianPhone: '', studentPhone: '',
-                batchCategory: 'HSC 1st Year', sscBoard: 'Rajshahi', sscYear: '', sscGpa: '',
-                hscBoard: 'Rajshahi', hscYear: '', hscGpa: '', paymentType: 'New Admission', 
-                totalCourseFee: '14000', previousPaid: 0, admissionFeePaid: ''
+                collegeName: '', guardianPhone: '', studentPhone: '', batchCategory: 'HSC 1st Year', 
+                sscBoard: 'Rajshahi', sscYear: '', sscGpa: '', hscBoard: 'Rajshahi', hscYear: '', hscGpa: '', 
+                paymentType: 'New Admission', totalCourseFee: '14000', previousPaid: 0, admissionFeePaid: ''
               });
               setSearchRoll('');
               setShowReceipt(false);

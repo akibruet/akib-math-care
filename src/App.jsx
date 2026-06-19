@@ -1,9 +1,14 @@
 import React, { useState, useRef } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import { db } from './firebase'; 
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
 
 export default function App() {
+  const [searchRoll, setSearchRoll] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [currentSlipNo, setCurrentSlipNo] = useState(1);
+  const [existingDocId, setExistingDocId] = useState(null);
+
   const [formData, setFormData] = useState({
     rollNo: '',
     batchName: '',
@@ -23,13 +28,13 @@ export default function App() {
     studentPhone: '',
     batchCategory: 'HSC 1st Year',
     
-    // Academic Records (SSC & HSC)
     sscBoard: 'Rajshahi', sscYear: '', sscGpa: '',
     hscBoard: 'Rajshahi', hscYear: '', hscGpa: '',
     
-    // Fee Logic
-    totalCourseFee: '14000', // ডিফল্ট ১৪,০০০ টাকা
-    admissionFeePaid: ''     // ভর্তির সময় পরিশোধিত টাকা
+    paymentType: 'New Admission',
+    totalCourseFee: '14000', 
+    previousPaid: 0,        // আগে কত পেইড ছিল ট্র্যাকিং
+    admissionFeePaid: ''    // আজ কত দিচ্ছে
   });
   
   const [showReceipt, setShowReceipt] = useState(false);
@@ -39,13 +44,63 @@ export default function App() {
   const receiptRef = useRef();
   const fullFormRef = useRef();
 
+  // ডাটাবেজ থেকে রোল নাম্বার দিয়ে স্টুডেন্ট খুঁজে বের করার ম্যাজিক ফাংশন
+  const handleFindStudent = async () => {
+    if (!searchRoll) {
+      alert("অনুগ্রহ করে খোঁজার জন্য রোল নাম্বারটি লিখুন!");
+      return;
+    }
+    setIsSearching(true);
+    try {
+      const q = query(collection(db, "students"), where("rollNo", "==", searchRoll));
+      const querySnapshot = await getDocs(q);
+      
+      if (querySnapshot.empty) {
+        alert("এই রোল নাম্বারের কোনো শিক্ষার্থীর তথ্য ডাটাবেজে পাওয়া যায়নি! নতুন এন্ট্রি নিতে পারেন।");
+        setIsSearching(false);
+        return;
+      }
+
+      // সবচেয়ে লেটেস্ট পেমেন্ট রেকর্ডটি নেওয়া হচ্ছে
+      let latestDoc = null;
+      querySnapshot.forEach((doc) => {
+        latestDoc = { id: doc.id, ...doc.data() };
+      });
+
+      // আগের মোট পেইড হিসেব করা (টোটাল কোর্স ফি - আগের ডিউ)
+      const prevDue = Number(latestDoc.dueAmount || 0);
+      const totalFee = Number(latestDoc.totalCourseFee || 14000);
+      const calculatedPrevPaid = totalFee - prevDue;
+
+      // ফর্ম ডেটাতে পুরানো সব ডেটা অটো-লোড করা
+      setFormData({
+        ...latestDoc,
+        paymentType: 'Due Payment',
+        previousPaid: calculatedPrevPaid,
+        admissionFeePaid: '' // আজকের পেমেন্ট খালি রাখা হলো ইনপুটের জন্য
+      });
+
+      // স্লিপ নাম্বার নির্ধারণ (আগের স্লিপ + ১)
+      const nextSlip = Number(latestDoc.slipNo || 1) + 1;
+      setCurrentSlipNo(nextSlip);
+      setExistingDocId(latestDoc.id);
+
+      alert(`শিক্ষার্থী "${latestDoc.studentNameEn}" এর তথ্য পাওয়া গেছে! বকেয়া আছে: ${prevDue} TK`);
+    } catch (error) {
+      console.error("Error searching student: ", error);
+      alert("অনুসন্ধান করতে সমস্যা হয়েছে!");
+    }
+    setIsSearching(false);
+  };
+
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
   };
 
   const handleSubmit = async () => {
     if (!formData.studentNameEn || !formData.studentPhone || !formData.admissionFeePaid) {
-      alert("অনুগ্রহ করে শিক্ষার্থীর নাম (English), মোবাইল নাম্বার এবং এডমিশন ফি অবশ্যই লিখুন!");
+      alert("অনুগ্রহ করে নাম, মোবাইল এবং আজকের জমার পরিমাণ অবশ্যই লিখুন!");
       return;
     }
 
@@ -54,21 +109,25 @@ export default function App() {
       const generatedReceiptNo = 'AMAAC-' + Math.floor(100000 + Math.random() * 900000);
       setReceiptNo(generatedReceiptNo);
 
-      // ডাটাবেজে কোর্স ফি, পেইড ফি এবং ডিউ হিসাবসহ সেভ হচ্ছে
-      const dueCalculated = Number(formData.totalCourseFee) - Number(formData.admissionFeePaid);
+      // নতুন বকেয়া হিসাব = আগের বকেয়া (টোটাল - আগের পেইড) - আজকের পেইড
+      const currentDue = (Number(formData.totalCourseFee) - Number(formData.previousPaid)) - Number(formData.admissionFeePaid);
 
-      await addDoc(collection(db, "students"), {
+      const paymentData = {
         ...formData,
-        dueAmount: dueCalculated,
+        dueAmount: currentDue,
+        slipNo: currentSlipNo,
         receiptNo: generatedReceiptNo,
         date: new Date().toLocaleDateString(),
         createdAt: new Date()
-      });
+      };
+
+      // নতুন ডাটাবেজ এন্ট্রি হিসেবে সেভ হবে যাতে আগের স্লিপের হিস্ট্রিও নষ্ট না হয়
+      await addDoc(collection(db, "students"), paymentData);
 
       setIsSubmitting(false);
       setShowReceipt(true);
     } catch (error) {
-      console.error("Error adding document: ", error);
+      console.error("Error saving payment: ", error);
       alert("ডাটাবেজে সেভ করতে সমস্যা হয়েছে!");
       setIsSubmitting(false);
     }
@@ -77,12 +136,11 @@ export default function App() {
   const handlePrintReceipt = useReactToPrint({ contentRef: receiptRef });
   const handlePrintFullForm = useReactToPrint({ contentRef: fullFormRef });
 
-  // পুরো পেজ কভার করার জন্য উইডথ এবং প্যাডিং সর্বোচ্চ অপ্টিমাইজড করা হয়েছে
   const renderFormContent = (isReadOnly = false) => (
-    <div className="bg-[#e2f1f5] p-6 md:p-8 rounded-xl border-2 border-cyan-800 w-full text-slate-800 text-xs print-exact print-page-break" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact', pageBreakInside: 'avoid' }}>
+    <div className="bg-[#e2f1f5] p-5 rounded-xl border-2 border-cyan-800 w-full text-slate-800 text-xs print-exact print-page-break" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact', pageBreakInside: 'avoid' }}>
       
       {/* Header Panel */}
-      <div className="flex flex-row justify-between items-center border-b-2 border-cyan-800 pb-3 mb-4">
+      <div className="flex flex-row justify-between items-center border-b-2 border-cyan-800 pb-2 mb-3">
         <div className="bg-cyan-900 text-white p-3 font-bold text-center rounded-lg text-xs tracking-wider w-24 h-24 flex items-center justify-center border border-cyan-950 shrink-0">
           AKIB<br/>MATH<br/>CARE
         </div>
@@ -215,32 +273,29 @@ export default function App() {
             </div>
           </div>
 
-          {/* Updated Course Fee & Admission Fee Config (Monthly Fee Completely Cut) */}
+          {/* Fee Panel with Smart Auto-Memory Logic */}
           <div className="flex flex-row gap-3 pt-1">
             <div className="flex-1">
-              <label className="block font-bold mb-0.5 text-cyan-950">Batch (কোর্স ব্যাচ)</label>
-              {isReadOnly ? <div className="p-2 bg-cyan-50/50 border border-cyan-200 rounded font-bold min-h-[34px]">{formData.batchCategory}</div> :
-              <select name="batchCategory" value={formData.batchCategory} onChange={handleChange} className="w-full p-2 border bg-cyan-50/50 rounded font-semibold focus:outline-none text-xs">
-                <option>HSC 1st Year</option>
-                <option>HSC 2nd Year</option>
-                <option>HSC Final Preparation</option>
-                <option>Admission</option>
-              </select>}
+              <label className="block font-bold mb-0.5 text-cyan-950">Purpose (ধরণ)</label>
+              <div className="p-2 bg-cyan-50/50 border border-cyan-200 rounded font-bold min-h-[34px]">{formData.paymentType}</div>
             </div>
             <div className="flex-1">
-              <label className="block font-bold mb-0.5 text-cyan-950">Total Course Fee (BDT)</label>
-              {isReadOnly ? <div className="p-2 bg-cyan-50/50 border border-cyan-200 rounded font-bold min-h-[34px]">{formData.totalCourseFee} TK</div> :
-              <input type="number" name="totalCourseFee" value={formData.totalCourseFee} onChange={handleChange} placeholder="e.g. 14000" className="w-full p-2 border bg-cyan-50/50 rounded font-bold focus:outline-none" />}
+              <label className="block font-bold mb-0.5 text-cyan-950">Total Course Fee</label>
+              <div className="p-2 bg-slate-50 border rounded font-bold min-h-[34px]">{formData.totalCourseFee} TK</div>
             </div>
             <div className="flex-1">
-              <label className="block font-bold mb-0.5 text-cyan-950">Admission Fee Paid (BDT) *</label>
-              {isReadOnly ? <div className="p-2 bg-cyan-50/50 border border-cyan-200 rounded font-black min-h-[34px] text-cyan-900">{formData.admissionFeePaid} TK</div> :
-              <input type="number" name="admissionFeePaid" value={formData.admissionFeePaid} onChange={handleChange} placeholder="Amount paid at admission" className="w-full p-2 border bg-cyan-50/50 rounded font-bold focus:outline-none" />}
+              <label className="block font-bold mb-0.5 text-cyan-950">Previously Paid (আগে জমা)</label>
+              <div className="p-2 bg-slate-50 border rounded font-semibold text-emerald-700 min-h-[34px]">{formData.previousPaid} TK</div>
+            </div>
+            <div className="flex-1">
+              <label className="block font-bold mb-0.5 text-cyan-950">Amount Paid Now *</label>
+              {isReadOnly ? <div className="p-2 bg-cyan-900 text-white rounded font-black min-h-[34px]">{formData.admissionFeePaid} TK</div> :
+              <input type="number" name="admissionFeePaid" value={formData.admissionFeePaid} onChange={handleChange} placeholder="আজকে জমার পরিমাণ" className="w-full p-2 border border-cyan-400 bg-amber-50 rounded font-black focus:outline-none" />}
             </div>
           </div>
         </div>
 
-        {/* Academic Records Table with BOTH SSC & HSC Fields Included */}
+        {/* Academic Records */}
         <div className="bg-white p-3 rounded-lg border border-slate-200 text-[11px]">
           <h3 className="font-bold text-cyan-950 mb-1.5 uppercase border-b pb-0.5">Academic Records</h3>
           <table className="w-full text-left border-collapse border border-slate-300">
@@ -253,38 +308,36 @@ export default function App() {
               </tr>
             </thead>
             <tbody>
-              {/* SSC Row */}
               <tr>
                 <td className="p-2 border border-slate-300 font-bold bg-slate-50">SSC</td>
                 <td className="p-1 border border-slate-300">
                   {isReadOnly ? formData.sscBoard : <select name="sscBoard" value={formData.sscBoard} onChange={handleChange} className="w-full focus:outline-none"><option>Rajshahi</option><option>Dhaka</option><option>Dinajpur</option><option>Jashore</option></select>}
                 </td>
                 <td className="p-1 border border-slate-300">
-                  {isReadOnly ? formData.sscYear : <input name="sscYear" value={formData.sscYear} onChange={handleChange} placeholder="e.g. 2024" className="w-full p-1 focus:outline-none font-semibold" />}
+                  {isReadOnly ? formData.sscYear : <input name="sscYear" value={formData.sscYear} onChange={handleChange} placeholder="e.g. 2024" className="w-full p-1 focus:outline-none" />}
                 </td>
                 <td className="p-1 border border-slate-300">
-                  {isReadOnly ? formData.sscGpa : <input name="sscGpa" value={formData.sscGpa} onChange={handleChange} placeholder="e.g. 5.00" className="w-full p-1 focus:outline-none font-bold text-cyan-950" />}
+                  {isReadOnly ? formData.sscGpa : <input name="sscGpa" value={formData.sscGpa} onChange={handleChange} placeholder="e.g. 5.00" className="w-full p-1 focus:outline-none font-bold" />}
                 </td>
               </tr>
-              {/* HSC Row */}
               <tr>
                 <td className="p-2 border border-slate-300 font-bold bg-slate-50">HSC / Test</td>
                 <td className="p-1 border border-slate-300">
                   {isReadOnly ? formData.hscBoard : <select name="hscBoard" value={formData.hscBoard} onChange={handleChange} className="w-full focus:outline-none"><option>Rajshahi</option><option>Dhaka</option><option>Dinajpur</option><option>Jashore</option></select>}
                 </td>
                 <td className="p-1 border border-slate-300">
-                  {isReadOnly ? formData.hscYear : <input name="hscYear" value={formData.hscYear} onChange={handleChange} placeholder="e.g. 2026" className="w-full p-1 focus:outline-none font-semibold" />}
+                  {isReadOnly ? formData.hscYear : <input name="hscYear" value={formData.hscYear} onChange={handleChange} placeholder="e.g. 2026" className="w-full p-1 focus:outline-none" />}
                 </td>
                 <td className="p-1 border border-slate-300">
-                  {isReadOnly ? formData.hscGpa : <input name="hscGpa" value={formData.hscGpa} onChange={handleChange} placeholder="e.g. 5.00" className="w-full p-1 focus:outline-none font-bold text-cyan-950" />}
+                  {isReadOnly ? formData.hscGpa : <input name="hscGpa" value={formData.hscGpa} onChange={handleChange} placeholder="e.g. 5.00" className="w-full p-1 focus:outline-none font-bold" />}
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        {/* Declaration & Signatures */}
-        <div className="bg-white p-3.5 rounded-lg border border-slate-200 text-justify space-y-4 text-[11px]">
+        {/* Declaration */}
+        <div className="bg-white p-3 rounded-lg border border-slate-200 text-justify space-y-4 text-[11px]">
           <p className="italic text-slate-700 leading-relaxed">
             I am <span className="font-bold underline uppercase text-cyan-950 px-1">{formData.studentNameEn || '...........................................'}</span> hereby promising that I must follow the rules & regulations of <span className="font-bold text-cyan-900">"AKIB MATH ACADEMIC AND ADMISSION CARE"</span> and willing to be bound to obey any decision of the authority.
           </p>
@@ -304,33 +357,46 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-100 p-4 md:p-6 flex flex-col items-center font-sans text-slate-800">
       
-      {/* গ্লোবাল A4 প্রিন্ট ফুল কভারেজ ফিক্সিং স্টাইলব্লক */}
+      {/* ১. সার্চ বার প্যানেল (উপরের অংশ - নো প্রিন্ট) */}
+      {!showReceipt && (
+        <div className="w-full max-w-3xl bg-cyan-950 text-white p-4 rounded-t-xl flex items-center justify-between shadow-md no-print gap-4">
+          <div className="flex-1">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-300">Due Clearance Mode (বকেয়া কালেকশন)</h3>
+            <p className="text-[10px] opacity-75">রোল নাম্বার লিখে সার্চ দিলে আগের সব হিসাব অটো লোড হয়ে যাবে</p>
+          </div>
+          <div className="flex flex-row gap-2">
+            <input 
+              type="text" 
+              value={searchRoll} 
+              onChange={(e) => setSearchRoll(e.target.value)}
+              placeholder="Enter Student Roll..." 
+              className="p-2 text-xs rounded bg-white text-slate-900 font-bold focus:outline-none w-44"
+            />
+            <button 
+              onClick={handleFindStudent}
+              disabled={isSearching}
+              className="bg-emerald-600 px-4 py-2 rounded text-xs font-bold hover:bg-emerald-700 transition disabled:bg-slate-500"
+            >
+              {isSearching ? "Searching..." : "🔍 Find Student"}
+            </button>
+          </div>
+        </div>
+      )}
+
       <style>{`
         @media print {
-          .print-exact {
-            background-color: #e2f1f5 !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          .print-page-break {
-            page-break-inside: avoid !important;
-            break-inside: avoid !important;
-          }
+          .print-exact { background-color: #e2f1f5 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          .print-page-break { page-break-inside: avoid !important; break-inside: avoid !important; }
           body { background: white; }
-          .no-print { display: none; }
-          @page {
-            size: A4;
-            margin: 0.25in 0.35in; /* মার্জিন অপ্টিমাইজড করে ফুল পেজ জুরে কভার */
-          }
+          .no-print { display: none !important; }
+          @page { size: A4; margin: 0.25in 0.35in; }
           .flex { display: flex !important; flex-direction: row !important; }
           .flex-1 { flex: 1 1 0% !important; }
-          .gap-3 { gap: 12px !important; }
-          .gap-2 { gap: 8px !important; }
         }
       `}</style>
 
       {!showReceipt ? (
-        <div className="w-full max-w-3xl rounded-xl shadow-2xl">
+        <div className="w-full max-w-3xl rounded-b-xl shadow-2xl">
           {renderFormContent(false)}
           <div className="bg-[#e2f1f5] px-6 pb-6 md:px-8 md:pb-8 rounded-b-xl">
             <button 
@@ -338,71 +404,80 @@ export default function App() {
               disabled={isSubmitting}
               className="w-full bg-cyan-900 text-white py-3 rounded-lg font-bold text-base hover:bg-cyan-950 transition shadow-lg disabled:bg-gray-400"
             >
-              {isSubmitting ? "Saving Form Data to Database..." : "Submit Form & Generate Receipt"}
+              {isSubmitting ? "Saving & Generating Receipt..." : "Submit Payment & Print"}
             </button>
           </div>
         </div>
       ) : (
         <div className="flex flex-col items-center w-full max-w-3xl space-y-6">
           
-          {/* ১. আপডেটেড মানি রশিদ (টোটাল কোর্স ফি এবং ডিউ ক্যালকুলেশন প্যানেলসহ) */}
+          {/* রিসিট প্রিভিউ উইথ স্লিপ নাম্বার ট্র্যাকিং */}
           <div className="w-full bg-white p-2 rounded-xl shadow-md border">
-            <h2 className="text-sm font-bold text-cyan-950 px-4 py-2 border-b">রশিদ প্রিভিউ (Money Receipt Preview)</h2>
+            <div className="flex justify-between items-center px-4 py-2 border-b bg-slate-50">
+              <h2 className="text-sm font-bold text-cyan-950">রশিদ প্রিভিউ (Money Receipt Preview)</h2>
+              <span className="bg-cyan-900 text-white font-black px-3 py-1 rounded text-xs">
+                SLIP NO: #{currentSlipNo} {currentSlipNo === 1 ? '(Admission)' : '(Due Payment)'}
+              </span>
+            </div>
             <div className="p-4 flex justify-center">
               <div ref={receiptRef} className="bg-white p-8 w-full border-2 border-dashed border-gray-400 text-sm font-sans">
-                <div className="text-center border-b-2 pb-3 mb-6 border-cyan-800">
+                <div className="text-center border-b-2 pb-3 mb-4 border-cyan-800">
                   <h3 className="text-2xl font-black text-cyan-900 tracking-wide uppercase">AKIB MATH</h3>
                   <p className="text-xs font-bold text-cyan-700 uppercase tracking-wider">ACADEMIC & ADMISSION CARE</p>
                   <p className="text-[11px] text-gray-500 font-medium mt-1">Malopara, Mohila College Road, Kadirganj, Rajshahi</p>
-                  <div className="mt-3 inline-block bg-slate-100 text-cyan-950 font-bold px-6 py-1 rounded border tracking-widest text-sm">
-                    MONEY RECEIPT (টাকা প্রাপ্তির রশিদ)
+                  <div className="mt-2.5 inline-block bg-slate-900 text-white font-black px-5 py-0.5 rounded tracking-widest text-xs">
+                    MONEY RECEIPT / SLIP #{currentSlipNo}
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-y-3 gap-x-8 text-xs mb-5">
+                <div className="grid grid-cols-2 gap-y-2 text-xs mb-4">
                   <p><strong>Roll No:</strong> {formData.rollNo || 'N/A'}</p>
                   <p className="text-right"><strong>Receipt No:</strong> {receiptNo}</p>
-                  <p><strong>Batch Name:</strong> {formData.batchName || 'N/A'} ({formData.batchTime || 'N/A'})</p>
+                  <p><strong>Batch Name:</strong> {formData.batchName || 'N/A'}</p>
                   <p className="text-right"><strong>Date:</strong> {new Date().toLocaleDateString()}</p>
-                  <p className="col-span-2"><strong>Class Day:</strong> {formData.classDays}</p>
+                  <p><strong>Class Day:</strong> {formData.classDays}</p>
+                  <p className="text-right"><strong>Batch Time:</strong> {formData.batchTime || 'N/A'}</p>
                 </div>
                 
-                <hr className="border-gray-300 my-3" />
+                <hr className="border-gray-300 my-2" />
                 
-                <div className="space-y-3 text-xs mb-5">
+                <div className="space-y-2 text-xs mb-4">
                   <p><strong className="inline-block w-36">Student Name:</strong> <span className="uppercase font-bold text-cyan-950">{formData.studentNameEn}</span></p>
-                  <p><strong className="inline-block w-36">College Name:</strong> {formData.collegeName || 'N/A'}</p>
                   <p><strong className="inline-block w-36">Contact No:</strong> {formData.studentPhone}</p>
                   <p><strong className="inline-block w-36">Course Category:</strong> <span className="font-semibold">{formData.batchCategory}</span></p>
                 </div>
                 
-                <hr className="border-gray-300 my-3" />
+                <hr className="border-gray-300 my-2" />
                 
-                {/* নিখুঁত ডিউ ক্যালকুলেশন স্ট্রাকচার */}
-                <div className="bg-slate-50 p-3 rounded border border-slate-200 space-y-2 text-xs font-medium">
+                {/* নিখুঁত লাইভ বকেয়া হিসাব বিবরণী */}
+                <div className="bg-slate-50 p-3 rounded border border-slate-200 space-y-1.5 text-xs font-medium">
                   <div className="flex justify-between text-slate-600">
                     <span>Total Course Fee (মোট কোর্স ফি):</span>
                     <span>{formData.totalCourseFee} TK</span>
                   </div>
-                  <div className="flex justify-between text-emerald-700 font-bold border-b pb-1.5">
-                    <span>Paid Admission Fee (আজ প্রদানকৃত টাকা):</span>
+                  <div className="flex justify-between text-slate-600">
+                    <span>Previously Paid (পূর্বে মোট জমা):</span>
+                    <span>{formData.previousPaid} TK</span>
+                  </div>
+                  <div className="flex justify-between text-emerald-700 font-bold border-b pb-1">
+                    <span>Amount Paid Now (আজকে জমা):</span>
                     <span>{formData.admissionFeePaid} TK</span>
                   </div>
                   <div className="flex justify-between text-red-700 font-black text-sm pt-0.5">
-                    <span>Total Due Amount (মোট বকেয়া টাকা):</span>
-                    <span>{Number(formData.totalCourseFee) - Number(formData.admissionFeePaid)} TK</span>
+                    <span>Current Due Amount (বর্তমান মোট বকেয়া):</span>
+                    <span>{Number(formData.totalCourseFee) - Number(formData.previousPaid) - Number(formData.admissionFeePaid)} TK</span>
                   </div>
                 </div>
 
-                <div className="mt-14 flex justify-between text-[11px] text-gray-500 pt-4 border-t border-gray-200 font-semibold">
-                  <p className="italic">Generated Digitally</p>
+                <div className="mt-12 flex justify-between text-[11px] text-gray-500 pt-4 border-t border-gray-200 font-semibold">
+                  <p className="italic">Slip #{currentSlipNo} | Generated Digitally</p>
                   <p className="border-t-2 border-black px-6 pt-1 text-gray-800">Authority Signature</p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* ২. ফুল পেজ কভার করা এ৪ ভর্তি ফরম */}
+          {/* ভর্তি ফরম প্রিভিউ */}
           <div className="w-full bg-white p-2 rounded-xl shadow-md border">
             <h2 className="text-sm font-bold text-cyan-950 px-4 py-2 border-b">ভর্তি ফরম প্রিভিউ (Admission Form Preview)</h2>
             <div className="p-4" ref={fullFormRef}>
@@ -410,10 +485,10 @@ export default function App() {
             </div>
           </div>
           
-          {/* অ্যাকশন কন্ট্রোল প্যানেল */}
+          {/* অ্যাকশন প্যানেল */}
           <div className="flex flex-wrap gap-4 justify-center w-full bg-white p-4 rounded-xl shadow border no-print">
             <button onClick={handlePrintReceipt} className="bg-cyan-800 text-white px-5 py-2.5 rounded-lg font-bold shadow hover:bg-cyan-900 transition text-sm">
-              🖨️ Print Money Receipt
+              🖨️ Print Receipt
             </button>
             <button onClick={handlePrintFullForm} className="bg-indigo-600 text-white px-5 py-2.5 rounded-lg font-bold shadow hover:bg-indigo-700 transition text-sm">
               📝 Print Admission Form
@@ -425,11 +500,14 @@ export default function App() {
                 mothersName: '', mothersProfession: '', address: '', schoolName: '',
                 collegeName: '', bloodGroup: 'A+', guardianPhone: '', studentPhone: '',
                 batchCategory: 'HSC 1st Year', sscBoard: 'Rajshahi', sscYear: '', sscGpa: '',
-                hscBoard: 'Rajshahi', hscYear: '', hscGpa: '', totalCourseFee: '14000', admissionFeePaid: ''
+                hscBoard: 'Rajshahi', hscYear: '', hscGpa: '', paymentType: 'New Admission', 
+                totalCourseFee: '14000', previousPaid: 0, admissionFeePaid: ''
               });
+              setCurrentSlipNo(1);
+              setSearchRoll('');
               setShowReceipt(false);
             }} className="bg-slate-500 text-white px-5 py-2.5 rounded-lg font-bold shadow hover:bg-slate-600 transition text-sm">
-              🔄 New Admission
+              🔄 Clear / New Admission
             </button>
           </div>
         </div>

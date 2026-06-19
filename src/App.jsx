@@ -1,13 +1,12 @@
 import React, { useState, useRef } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import { db } from './firebase'; 
-import { collection, addDoc, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
 
 export default function App() {
   const [searchRoll, setSearchRoll] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [currentSlipNo, setCurrentSlipNo] = useState(1);
-  const [existingDocId, setExistingDocId] = useState(null);
 
   const [formData, setFormData] = useState({
     rollNo: '',
@@ -33,8 +32,8 @@ export default function App() {
     
     paymentType: 'New Admission',
     totalCourseFee: '14000', 
-    previousPaid: 0,        // আগে কত পেইড ছিল ট্র্যাকিং
-    admissionFeePaid: ''    // আজ কত দিচ্ছে
+    previousPaid: 0,        
+    admissionFeePaid: ''    
   });
   
   const [showReceipt, setShowReceipt] = useState(false);
@@ -44,7 +43,7 @@ export default function App() {
   const receiptRef = useRef();
   const fullFormRef = useRef();
 
-  // ডাটাবেজ থেকে রোল নাম্বার দিয়ে স্টুডেন্ট খুঁজে বের করার ম্যাজিক ফাংশন
+  // ডাটাবেজ থেকে স্টুডেন্ট খুঁজে বের করার অপ্টিমাইজড ফাংশন
   const handleFindStudent = async () => {
     if (!searchRoll) {
       alert("অনুগ্রহ করে খোঁজার জন্য রোল নাম্বারটি লিখুন!");
@@ -52,40 +51,42 @@ export default function App() {
     }
     setIsSearching(true);
     try {
-      const q = query(collection(db, "students"), where("rollNo", "==", searchRoll));
+      const q = query(collection(db, "students"), where("rollNo", "==", searchRoll.trim()));
       const querySnapshot = await getDocs(q);
       
       if (querySnapshot.empty) {
-        alert("এই রোল নাম্বারের কোনো শিক্ষার্থীর তথ্য ডাটাবেজে পাওয়া যায়নি! নতুন এন্ট্রি নিতে পারেন।");
+        alert("এই রোল নাম্বারের কোনো শিক্ষার্থীর তথ্য ডাটাবেজে পাওয়া যায়নি!");
         setIsSearching(false);
         return;
       }
 
-      // সবচেয়ে লেটেস্ট পেমেন্ট রেকর্ডটি নেওয়া হচ্ছে
+      // সবগুলো ট্রানজেকশন অ্যানালাইসিস করে লেটেস্ট বকেয়া বের করা
       let latestDoc = null;
+      let maxSlipNo = 0;
+
       querySnapshot.forEach((doc) => {
-        latestDoc = { id: doc.id, ...doc.data() };
+        const docData = doc.data();
+        const docSlipNo = Number(docData.slipNo || 1);
+        if (docSlipNo >= maxSlipNo) {
+          maxSlipNo = docSlipNo;
+          latestDoc = { id: doc.id, ...docData };
+        }
       });
 
-      // আগের মোট পেইড হিসেব করা (টোটাল কোর্স ফি - আগের ডিউ)
-      const prevDue = Number(latestDoc.dueAmount || 0);
-      const totalFee = Number(latestDoc.totalCourseFee || 14000);
-      const calculatedPrevPaid = totalFee - prevDue;
+      // বকেয়া ও জমার হিসাব টাইপ কাস্টিং ফিক্স
+      const currentDueFromDb = Number(latestDoc.dueAmount || 0);
+      const totalFeeFromDb = Number(latestDoc.totalCourseFee || 14000);
+      const calculatedPrevPaid = totalFeeFromDb - currentDueFromDb;
 
-      // ফর্ম ডেটাতে পুরানো সব ডেটা অটো-লোড করা
       setFormData({
         ...latestDoc,
         paymentType: 'Due Payment',
         previousPaid: calculatedPrevPaid,
-        admissionFeePaid: '' // আজকের পেমেন্ট খালি রাখা হলো ইনপুটের জন্য
+        admissionFeePaid: '' 
       });
 
-      // স্লিপ নাম্বার নির্ধারণ (আগের স্লিপ + ১)
-      const nextSlip = Number(latestDoc.slipNo || 1) + 1;
-      setCurrentSlipNo(nextSlip);
-      setExistingDocId(latestDoc.id);
-
-      alert(`শিক্ষার্থী "${latestDoc.studentNameEn}" এর তথ্য পাওয়া গেছে! বকেয়া আছে: ${prevDue} TK`);
+      setCurrentSlipNo(maxSlipNo + 1);
+      alert(`শিক্ষার্থী "${latestDoc.studentNameEn}" এর তথ্য লোড হয়েছে!\nবর্তমান বকেয়া আছে: ${currentDueFromDb} TK`);
     } catch (error) {
       console.error("Error searching student: ", error);
       alert("অনুসন্ধান করতে সমস্যা হয়েছে!");
@@ -109,19 +110,23 @@ export default function App() {
       const generatedReceiptNo = 'AMAAC-' + Math.floor(100000 + Math.random() * 900000);
       setReceiptNo(generatedReceiptNo);
 
-      // নতুন বকেয়া হিসাব = আগের বকেয়া (টোটাল - আগের পেইড) - আজকের পেইড
-      const currentDue = (Number(formData.totalCourseFee) - Number(formData.previousPaid)) - Number(formData.admissionFeePaid);
+      // খুচরা সংখ্যা (যেমন: ২৪০০, ১২০০) নিখুঁত হিসাব করার জন্য Number() মেকানিজম
+      const totalFee = Number(formData.totalCourseFee || 0);
+      const prevPaid = Number(formData.previousPaid || 0);
+      const paidNow = Number(formData.admissionFeePaid || 0);
+
+      // ফাইনাল নিখুঁত বকেয়া হিসাব
+      const finalDueCalculated = totalFee - prevPaid - paidNow;
 
       const paymentData = {
         ...formData,
-        dueAmount: currentDue,
+        dueAmount: finalDueCalculated,
         slipNo: currentSlipNo,
         receiptNo: generatedReceiptNo,
         date: new Date().toLocaleDateString(),
         createdAt: new Date()
       };
 
-      // নতুন ডাটাবেজ এন্ট্রি হিসেবে সেভ হবে যাতে আগের স্লিপের হিস্ট্রিও নষ্ট না হয়
       await addDoc(collection(db, "students"), paymentData);
 
       setIsSubmitting(false);
@@ -138,7 +143,6 @@ export default function App() {
 
   const renderFormContent = (isReadOnly = false) => (
     <div className="bg-[#e2f1f5] p-5 rounded-xl border-2 border-cyan-800 w-full text-slate-800 text-xs print-exact print-page-break" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact', pageBreakInside: 'avoid' }}>
-      
       {/* Header Panel */}
       <div className="flex flex-row justify-between items-center border-b-2 border-cyan-800 pb-2 mb-3">
         <div className="bg-cyan-900 text-white p-3 font-bold text-center rounded-lg text-xs tracking-wider w-24 h-24 flex items-center justify-center border border-cyan-950 shrink-0">
@@ -273,7 +277,7 @@ export default function App() {
             </div>
           </div>
 
-          {/* Fee Panel with Smart Auto-Memory Logic */}
+          {/* Fee Panel */}
           <div className="flex flex-row gap-3 pt-1">
             <div className="flex-1">
               <label className="block font-bold mb-0.5 text-cyan-950">Purpose (ধরণ)</label>
@@ -300,7 +304,7 @@ export default function App() {
           <h3 className="font-bold text-cyan-950 mb-1.5 uppercase border-b pb-0.5">Academic Records</h3>
           <table className="w-full text-left border-collapse border border-slate-300">
             <thead>
-              <tr className="bg-cyan-950 text-white" style={{ backgroundColor: '#083344 !important', color: '#ffffff !important' }}>
+              <tr className="bg-cyan-950 text-white">
                 <th className="p-2 border border-slate-300">Examination</th>
                 <th className="p-2 border border-slate-300">Board</th>
                 <th className="p-2 border border-slate-300">Passing Year</th>
@@ -357,12 +361,11 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-100 p-4 md:p-6 flex flex-col items-center font-sans text-slate-800">
       
-      {/* ১. সার্চ বার প্যানেল (উপরের অংশ - নো প্রিন্ট) */}
       {!showReceipt && (
         <div className="w-full max-w-3xl bg-cyan-950 text-white p-4 rounded-t-xl flex items-center justify-between shadow-md no-print gap-4">
           <div className="flex-1">
             <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-300">Due Clearance Mode (বকেয়া কালেকশন)</h3>
-            <p className="text-[10px] opacity-75">রোল নাম্বার লিখে সার্চ দিলে আগের সব হিসাব অটো লোড হয়ে যাবে</p>
+            <p className="text-[10px] opacity-75">রোল নাম্বার লিখে সার্চ দিলে খুচরা সহ আগের সব হিসাব অটো লোড হয়ে যাবে</p>
           </div>
           <div className="flex flex-row gap-2">
             <input 
@@ -411,7 +414,7 @@ export default function App() {
       ) : (
         <div className="flex flex-col items-center w-full max-w-3xl space-y-6">
           
-          {/* রিসিট প্রিভিউ উইথ স্লিপ নাম্বার ট্র্যাকিং */}
+          {/* রশিদ প্রিভিউ উইথ স্লিপ নাম্বার ট্র্যাকিং */}
           <div className="w-full bg-white p-2 rounded-xl shadow-md border">
             <div className="flex justify-between items-center px-4 py-2 border-b bg-slate-50">
               <h2 className="text-sm font-bold text-cyan-950">রশিদ প্রিভিউ (Money Receipt Preview)</h2>
@@ -449,23 +452,28 @@ export default function App() {
                 
                 <hr className="border-gray-300 my-2" />
                 
-                {/* নিখুঁত লাইভ বকেয়া হিসাব বিবরণী */}
+                {/* নিখুঁত ও নির্ভুল গাণিতিক বিবরণী */}
                 <div className="bg-slate-50 p-3 rounded border border-slate-200 space-y-1.5 text-xs font-medium">
                   <div className="flex justify-between text-slate-600">
                     <span>Total Course Fee (মোট কোর্স ফি):</span>
-                    <span>{formData.totalCourseFee} TK</span>
+                    <span>{Number(formData.totalCourseFee).toLocaleString()} TK</span>
                   </div>
                   <div className="flex justify-between text-slate-600">
                     <span>Previously Paid (পূর্বে মোট জমা):</span>
-                    <span>{formData.previousPaid} TK</span>
+                    <span>{Number(formData.previousPaid).toLocaleString()} TK</span>
                   </div>
                   <div className="flex justify-between text-emerald-700 font-bold border-b pb-1">
                     <span>Amount Paid Now (আজকে জমা):</span>
-                    <span>{formData.admissionFeePaid} TK</span>
+                    <span>{Number(formData.admissionFeePaid).toLocaleString()} TK</span>
                   </div>
                   <div className="flex justify-between text-red-700 font-black text-sm pt-0.5">
                     <span>Current Due Amount (বর্তমান মোট বকেয়া):</span>
-                    <span>{Number(formData.totalCourseFee) - Number(formData.previousPaid) - Number(formData.admissionFeePaid)} TK</span>
+                    <span className="underline">
+                      {(Number(formData.totalCourseFee) - Number(formData.previousPaid) - Number(formData.admissionFeePaid)) <= 0 ? 
+                        "0.00 TK (PAID)" : 
+                        `${(Number(formData.totalCourseFee) - Number(formData.previousPaid) - Number(formData.admissionFeePaid)).toLocaleString()} TK`
+                      }
+                    </span>
                   </div>
                 </div>
 
@@ -503,7 +511,6 @@ export default function App() {
                 hscBoard: 'Rajshahi', hscYear: '', hscGpa: '', paymentType: 'New Admission', 
                 totalCourseFee: '14000', previousPaid: 0, admissionFeePaid: ''
               });
-              setCurrentSlipNo(1);
               setSearchRoll('');
               setShowReceipt(false);
             }} className="bg-slate-500 text-white px-5 py-2.5 rounded-lg font-bold shadow hover:bg-slate-600 transition text-sm">
